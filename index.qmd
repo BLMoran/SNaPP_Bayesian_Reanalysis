@@ -1,0 +1,113 @@
+---
+title: "Sugammadex Versus Neostigmine for Reversal of Neuromuscular Blockade and Pulmonary Complications"
+subtitle: "A Post-Hoc Bayesian Reanalysis of Aggregate Data"
+author: <span style="font-size:125%;">Dr Benjamin Moran</span> <br> MBBS, BMedSci(Hons), MSc(Stats), FCICM, FANZCA
+date: today
+format:
+  html:
+    embed-resources: true
+    grid:
+      body-width: 1200px
+      sidebar-width: 300px
+      margin-width: 100px
+      gutter-width: 0.5rem
+    citations-hover: true
+    theme:
+      - yeti
+execute:
+  echo: false
+  warning: false
+  message: false
+toc: true
+toc-location: left
+toc-depth: 4
+number-sections: true
+bibliography: references.bib
+csl: american-medical-association-10th-edition.csl
+---
+
+# Methods
+
+## Study Design and Patient Population
+
+This study is an unplanned post hoc Bayesian reanalysis of the Sugammadex vs Neostigmine and Postoperative Pulmonary Complications (SNaPP) trial, a prospective, multicentre, double-blind, randomised controlled trial conducted across 44 hospitals in Australia, New Zealand, and Hong Kong. The SNaPP trial enrolled adults undergoing surgery under general anaesthesia who received neuromuscular blocking agents and were randomised 1:1 to reversal with sugammadex or neostigmine. Full details of the trial design, eligibility criteria, and randomisation procedures have been published previously ([@leslie_sugammadex_2026a; @leslie_sugammadex_2026b]). This reanalysis was conducted under the same ethical oversight as the original trial.
+
+The primary composite outcome in the original trial was the occurrence of any postoperative pulmonary complication (PPC)—defined as atelectasis, pneumonia, aspiration pneumonitis, or acute respiratory distress syndrome (ARDS)—or death, assessed from randomisation until hospital discharge or postoperative day 7, whichever came first.
+
+## Rationale for an Ordinal Reanalysis
+
+The original trial analysed the primary outcome as a binary composite (any component versus none). This approach implicitly assigns equal weight to all components despite their different clinical significance: atelectasis, which may be radiographic only and of uncertain clinical importance, is treated equivalently to ARDS or death. We therefore reanalysed the primary outcome using an ordinal framework that respects the natural severity hierarchy among the composite components, allowing us to determine whether any treatment benefit is distributed uniformly across severity levels or concentrated at the milder end of the spectrum.
+
+Each patient was classified according to their worst observed outcome into one of five ordered categories:
+
+1.  **None** — no PPC and survived to discharge or day 7
+2.  **Atelectasis** — atelectasis only, no other PPC
+3.  **Pneumonia or aspiration pneumonitis** — with or without concurrent atelectasis
+4.  **ARDS** — with or without concurrent lower-severity PPCs
+5.  **Death** — from any cause
+
+Patients who experienced multiple PPCs were classified at the level of their most severe event (e.g., a patient with both atelectasis and pneumonia was classified as level 3). This "worst outcome" classification preserves the ordinal structure and avoids double-counting.
+
+## Statistical Analysis
+
+### Bayesian Cumulative Logit Models
+
+We fitted Bayesian cumulative logit (proportional odds) models to the five-level ordinal outcome. The cumulative logit model parameterises the log-odds of being at or below each severity level as a function of the treatment effect and random intercepts for site:
+
+$$\text{logit}[P(Y \le k)] = \alpha_k - \beta \cdot \text{treatment} - u_{\text{site}}, \quad k = 1, \ldots, 4$$
+
+where $\alpha_k$ are threshold parameters, $\beta$ is the treatment effect (common across thresholds under the proportional odds assumption), and $u_{\text{site}}$ are site-specific random intercepts. A negative value of $\beta$ indicates that sugammadex shifts the outcome distribution toward lower (better) severity categories.
+
+To assess whether the treatment effect varied across severity thresholds, we also fitted a category-specific effects model that relaxes the proportional odds assumption by estimating a separate treatment effect at each cumulative threshold:
+
+$$\text{logit}[P(Y \le k)] = \alpha_k - \beta_k \cdot \text{treatment} - u_{\text{site}}, \quad k = 1, \ldots, 4$$
+
+This model directly tests whether the benefit of sugammadex, if any, is concentrated at particular severity levels (e.g., only reducing atelectasis without affecting more severe outcomes). We compared the two models using leave-one-out cross-validation (LOO-CV) via Pareto smoothed importance sampling.
+
+### Prior Specification and Sensitivity Analysis
+
+To evaluate the influence of prior assumptions on posterior inference, we specified three prior distributions for the treatment effect on the log-odds scale:
+
+- **Vague prior:** Normal(0, 2). A diffuse prior that places minimal constraint on the treatment effect, allowing the trial data to drive inference almost entirely.
+
+- **Sceptical prior:** Normal(0, 1). A weakly informative prior centred on no effect, representing a position of clinical equipoise while regularising against implausibly large effects. Under this prior, 95% of the prior mass falls within a log-odds ratio of approximately ±2, corresponding to odds ratios between roughly 0.14 and 7.4.
+
+- **Informative prior:** Normal(−0.4, 0.25). Derived from a published systematic review and meta-analysis of randomised trials comparing sugammadex with neostigmine \[ref\], which reported a pooled odds ratio of 0.67 (95% CI, 0.47–0.96) for PPCs. The prior mean of −0.4 corresponds to log(0.67), and the standard deviation of 0.25 was chosen so that the 95% prior interval approximately spans the confidence interval of the meta-analytic estimate.
+
+For threshold (intercept) parameters, we specified Normal(0, 2) priors. For the standard deviation of site random intercepts, we specified an Exponential(1) prior, which places most mass on moderate between-site variability while allowing larger values. The same prior structure was applied to the category-specific effects model, with independent Normal(0, 1) priors on each threshold-specific treatment effect.
+
+### Estimands
+
+We report treatment effects on two scales:
+
+**Risk differences via marginal standardisation.** For each posterior draw, we predicted category probabilities for every patient under both counterfactual treatments (sugammadex and neostigmine), averaged predictions across the patient population, and took the difference. This g-computation approach integrates over the empirical distribution of site random effects and yields population-averaged (marginal) risk differences. We computed risk differences for four cumulative thresholds of increasing clinical severity:
+
+- P(Y ≥ 2): any PPC or death — equivalent to the original binary composite endpoint
+- P(Y ≥ 3): pneumonia or worse — excluding atelectasis to isolate clinically unambiguous complications
+- P(Y ≥ 4): ARDS or death
+- P(Y = 5): death
+
+**Log-odds ratios.** From the category-specific effects model, cumulative log-odds ratios were computed at each threshold from the marginalised predicted probabilities, allowing these to vary freely across severity levels.
+
+### Model Fitting and Convergence
+
+All models were fitted using the brms package (version 2.22) \[ref Bürkner 2017, 2018\] in R (version 4.4) \[ref R Core Team\], which implements Bayesian inference via Hamiltonian Monte Carlo using Stan \[ref Carpenter et al. 2017\]. We ran four randomly initialised Markov chains, each with 4000 iterations (1000 warmup), yielding 12,000 posterior draws per model. Convergence was assessed by examining R-hat statistics (all \< 1.01), effective sample sizes (bulk and tail ESS \> 400), the absence of divergent transitions, and visual inspection of trace plots.
+
+### Posterior Summaries
+
+Posterior distributions of treatment effects were summarised using the median and 95% credible intervals (CrI). Evidence for treatment benefit at each threshold was quantified as the posterior probability that the risk difference was less than zero (i.e., that sugammadex reduced the probability of reaching that severity level or worse). For the overall treatment effect under the proportional odds model, we additionally report the posterior probability that the odds ratio is less than 1 and less than 0.8, representing any benefit and a clinically meaningful benefit, respectively.
+
+### Region of Practical Equivalence
+
+To assess whether any observed treatment effect was of sufficient magnitude to be considered clinically meaningful — as distinct from merely being non-zero — we defined a region of practical equivalence (ROPE) around the null value on both the log-odds ratio and risk difference scales \[ref Kruschke 2018; ref Kruschke & Liddell 2018\]. For each estimand, we report the proportion of the posterior distribution falling within the ROPE. If the 95% highest density interval (HDI) falls entirely outside the ROPE, we conclude that the effect is practically meaningful; if the HDI falls entirely within the ROPE, we conclude practical equivalence to no effect; otherwise, the result is indeterminate \[ref Kruschke 2018\].
+
+Log-odds ratio scale. For the log-odds ratio, we specified a ROPE of \[−0.105, 0.105\], corresponding to an odds ratio interval of \[0.90, 1.11\]. This boundary was informed by a pre-registered Bayesian individual patient data meta-analysis of intraoperative ventilation trials with a composite PPC primary endpoint (NCT05886387) \[ref\], which pre-specified a ROPE of OR 0.9 to 1.1 for the same outcome domain. This is narrower than the generic default of \[−0.18, 0.18\] proposed by Kruschke \[ref Kruschke 2018\] for logistic models (derived from the π/√3 transformation of a negligible standardised effect of ±0.1) but reflects a domain-specific judgment about the minimum odds ratio shift considered clinically important for postoperative pulmonary complications.
+
+Risk difference scale. No consensus ROPE exists for risk differences in the PPC literature. We therefore specified ROPE boundaries based on clinical reasoning, noting that the same absolute risk difference carries different clinical weight depending on the severity of the outcome. For the primary composite threshold (P(Y ≥ 2), any PPC or death), we pre-specified a ROPE of \[−2 percentage points, +2 percentage points\], reflecting a judgment that an absolute risk reduction of less than 2% in the composite — even if non-zero — would be of limited clinical importance given the burden of treatment change (i.e., routine adoption of sugammadex over neostigmine). For the clinically significant complications threshold (P(Y ≥ 3), pneumonia or worse), we narrowed the ROPE to \[−1 percentage point, +1 percentage point\], reflecting the greater clinical gravity of these outcomes, where even a small absolute risk reduction could be meaningful. We did not specify a ROPE for the ARDS/death threshold owing to the very low baseline event rates, where any non-trivial reduction in absolute risk would be clinically important. These boundaries should be interpreted as reflecting the investigators' clinical judgment and are presented alongside a sensitivity analysis in which we varied the ROPE width by ±50% (e.g., \[−1%, +1%\] and \[−3%, +3%\] for the composite threshold) to assess how conclusions depended on the chosen boundaries.
+
+All analysis code is publicly available at \[repository URL\].
+
+# References
+
+::: {#refs}
+:::
