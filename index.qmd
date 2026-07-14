@@ -1,6 +1,6 @@
 ---
 title: "Sugammadex Versus Neostigmine for Reversal of Neuromuscular Blockade and Pulmonary Complications"
-subtitle: "A Post-Hoc Bayesian Reanalysis of Aggregate Data"
+subtitle: "A Post-Hoc Bayesian Ordinal Reanalysis of Aggregate Data"
 author: <span style="font-size:125%;">Dr Benjamin Moran</span> <br> MBBS, BMedSci(Hons), MSc(Stats), FCICM, FANZCA
 date: today
 format:
@@ -30,9 +30,23 @@ csl: american-medical-association-10th-edition.csl
 
 ## Study Design and Patient Population
 
-This study is an unplanned post hoc Bayesian reanalysis of the Sugammadex vs Neostigmine and Postoperative Pulmonary Complications (SNaPP) trial, a prospective, multicentre, double-blind, randomised controlled trial conducted across 44 hospitals in Australia, New Zealand, and Hong Kong. The SNaPP trial enrolled adults undergoing surgery under general anaesthesia who received neuromuscular blocking agents and were randomised 1:1 to reversal with sugammadex or neostigmine. Full details of the trial design, eligibility criteria, and randomisation procedures have been published previously ([@leslie_sugammadex_2026a; @leslie_sugammadex_2026b]). This reanalysis was conducted under the same ethical oversight as the original trial.
+This study is an unplanned post hoc Bayesian reanalysis of the Sugammadex vs Neostigmine and Postoperative Pulmonary Complications (SNaPP) trial, a prospective, multicentre, double-blind, randomised controlled trial conducted across 44 hospitals in Australia, New Zealand, and Hong Kong. The SNaPP trial enrolled adults undergoing surgery under general anaesthesia who received neuromuscular blocking agents and were randomised 1:1 to reversal with sugammadex or neostigmine. Full details of the trial design, eligibility criteria, and randomisation procedures have been published previously [@leslie_sugammadex_2026a; @leslie_sugammadex_2026b]. This reanalysis was conducted under the same ethical oversight as the original trial.
 
 The primary composite outcome in the original trial was the occurrence of any postoperative pulmonary complication (PPC)—defined as atelectasis, pneumonia, aspiration pneumonitis, or acute respiratory distress syndrome (ARDS)—or death, assessed from randomisation until hospital discharge or postoperative day 7, whichever came first.
+
+## Rationale for a Bayesian Reanalysis
+
+The original trial was analysed and reported within a frequentist framework, summarising the treatment effect through a point estimate, confidence interval, and *p*-value against a null hypothesis of no effect. That approach answers a specific question of whether the data are surprising under the assumption of no difference? It isn't well suited to the question of how probable a benefit is and whether any such benefit is large enough to matter. We therefore reanalysed the trial within a Bayesian framework, for several reasons specific to this problem.
+
+First, a Bayesian posterior yields direct probability statements about the treatment effect. We can report the posterior probability that sugammadex reduces a given outcome, and the probability that the reduction exceeds a clinically meaningful magnitude. This is the natural language for a bedside decision and avoids the well-documented misinterpretations of confidence intervals and *p*-values @mazzinari2026.
+
+Second, the situation in this trial is one where a benefit may be highly probable in direction yet small in magnitude. Distinguishing "probably beneficial" from "beneficial by an amount worth acting on" requires a framework that can quantify the probability mass at different effect sizes. The posterior distribution supports exactly this, through the region of practical equivalence (ROPE) and the severity-weighted decision analysis described below, both of which ask not merely whether an effect exists but whether it is large enough to change practice @kruschke2018.
+
+Third, a Bayesian framework allows external evidence to be incorporated explicitly and transparently through the prior. A substantial body of observational and randomised evidence on sugammadex and pulmonary complications already exists, and the informative prior lets us express what that evidence implies while the accompanying prior sensitivity analysis makes the influence of that choice fully visible @mazzinari2026.
+
+Fourth, the posterior draws propagate uncertainty coherently through every subsequent transformation. The absolute risk differences, cumulative-threshold contrasts, and the expected disutility that anchors the decision analysis are all computed draw-by-draw from the same posterior, so that uncertainty in the underlying model flows through to every reported quantity without reliance on asymptotic approximations — approximations that are, in any case, questionable for the rare, sparsely populated categories such as ARDS and death.
+
+It should be emphasised that this reanalysis is complementary to, not a correction of, the original report. The trial's frequentist analysis and this Bayesian reanalysis address different questions, and the value of the latter lies in reframing the evidence in decision-relevant terms rather than in overturning the former.
 
 ## Rationale for an Ordinal Reanalysis
 
@@ -52,60 +66,826 @@ Patients who experienced multiple PPCs were classified at the level of their mos
 
 ### Bayesian Cumulative Logit Models
 
-We fitted Bayesian cumulative logit (proportional odds) models to the five-level ordinal outcome. The cumulative logit model parameterises the log-odds of being at or below each severity level as a function of the treatment effect and random intercepts for site:
+We fitted Bayesian cumulative logit (proportional odds) models to the five-level ordinal outcome. The cumulative logit model parameterises the log-odds of being at or below each severity level as a function of the treatment effect:
 
-$$\text{logit}[P(Y \le k)] = \alpha_k - \beta \cdot \text{treatment} - u_{\text{site}}, \quad k = 1, \ldots, 4$$
+$$\text{logit}[P(Y \le k)] = \alpha_k - \beta \cdot \text{treatment}, \quad k = 1, \ldots, 4$$
 
-where $\alpha_k$ are threshold parameters, $\beta$ is the treatment effect (common across thresholds under the proportional odds assumption), and $u_{\text{site}}$ are site-specific random intercepts. A negative value of $\beta$ indicates that sugammadex shifts the outcome distribution toward lower (better) severity categories.
+where $\alpha_k$ are threshold parameters and $\beta$ is the treatment effect (common across thresholds under the proportional odds assumption). A negative value of $\beta$ indicates that sugammadex shifts the outcome distribution toward lower (better) severity categories. (With aggregate published data, site random intercepts cannot be estimated and are omitted.)
 
 To assess whether the treatment effect varied across severity thresholds, we also fitted a category-specific effects model that relaxes the proportional odds assumption by estimating a separate treatment effect at each cumulative threshold:
 
-$$\text{logit}[P(Y \le k)] = \alpha_k - \beta_k \cdot \text{treatment} - u_{\text{site}}, \quad k = 1, \ldots, 4$$
+$$\text{logit}[P(Y \le k)] = \alpha_k - \beta_k \cdot \text{treatment}, \quad k = 1, \ldots, 4$$
 
-This model directly tests whether the benefit of sugammadex, if any, is concentrated at particular severity levels (e.g., only reducing atelectasis without affecting more severe outcomes). We compared the two models using leave-one-out cross-validation (LOO-CV) via Pareto smoothed importance sampling.
+We compared the two models using leave-one-out cross-validation (LOO-CV) via Pareto smoothed importance sampling.
 
-### Prior Specification and Sensitivity Analysis
+### Estimands — Risk Differences Only
 
-To evaluate the influence of prior assumptions on posterior inference, we specified three prior distributions for the treatment effect on the log-odds scale:
+In contrast to the odds-ratio scale, which is non-collapsible and less directly interpretable at the bedside, this reanalysis reports treatment effects exclusively as **absolute risk differences (RD)** obtained by marginal standardisation (g-computation). For each posterior draw we predicted category probabilities under both counterfactual treatments, averaged across the patient population, and took the difference. A negative RD indicates that sugammadex reduces the probability of that outcome.
 
-- **Vague prior:** Normal(0, 2). A diffuse prior that places minimal constraint on the treatment effect, allowing the trial data to drive inference almost entirely.
+We report two families of RD estimand:
 
-- **Sceptical prior:** Normal(0, 1). A weakly informative prior centred on no effect, representing a position of clinical equipoise while regularising against implausibly large effects. Under this prior, 95% of the prior mass falls within a log-odds ratio of approximately ±2, corresponding to odds ratios between roughly 0.14 and 7.4.
+**Category-specific risk differences**, $\text{RD}_k = P(Y = k \mid \text{sug}) - P(Y = k \mid \text{neo})$, for all five outcome categories:
 
-- **Informative prior:** Normal(−0.4, 0.25). Derived from a published systematic review and meta-analysis of randomised trials comparing sugammadex with neostigmine \[ref\], which reported a pooled odds ratio of 0.67 (95% CI, 0.47–0.96) for PPCs. The prior mean of −0.4 corresponds to log(0.67), and the standard deviation of 0.25 was chosen so that the 95% prior interval approximately spans the confidence interval of the meta-analytic estimate.
+- P(Y = None)
+- P(Y = Atelectasis)
+- P(Y = Pneumonia/Aspiration)
+- P(Y = ARDS)
+- P(Y = Death)
 
-For threshold (intercept) parameters, we specified Normal(0, 2) priors. For the standard deviation of site random intercepts, we specified an Exponential(1) prior, which places most mass on moderate between-site variability while allowing larger values. The same prior structure was applied to the category-specific effects model, with independent Normal(0, 1) priors on each threshold-specific treatment effect.
+For the four complication categories a negative RD is favourable (sugammadex reduces the probability of that outcome). The "None" category is oriented in the opposite direction: it represents a complication-free course, so a *positive* RD is favourable, and it provides the most direct single summary of overall benefit — the mirror image of the "any PPC or death" cumulative threshold. Throughout, the reported probability of benefit is oriented accordingly, $P(\text{RD} > 0)$ for None and $P(\text{RD} < 0)$ for the four complication categories.
 
-### Estimands
+**Cumulative-threshold risk differences**, $P(Y \ge k \mid \text{sug}) - P(Y \ge k \mid \text{neo})$, at each severity threshold (any PPC or death; pneumonia or worse; ARDS or death; death).
 
-We report treatment effects on two scales:
+### Prior Specification
 
-**Risk differences via marginal standardisation.** For each posterior draw, we predicted category probabilities for every patient under both counterfactual treatments (sugammadex and neostigmine), averaged predictions across the patient population, and took the difference. This g-computation approach integrates over the empirical distribution of site random effects and yields population-averaged (marginal) risk differences. We computed risk differences for four cumulative thresholds of increasing clinical severity:
+Three prior distributions were placed on the treatment effect (log-odds scale) for the proportional odds model: a **weakly regularising** $N(0, 1)$, a **vague** $N(0, 10)$, and an **informative** $N(−0.4, 0.25)$ derived from a meta-analytic pooled OR of 0.67 for PPCs @olesnicky2024. Threshold parameters received $N(0, 2)$ priors. The weakly regularising prior is used for the primary RD estimands; all three inform the prior sensitivity analysis, in which the full set of estimands is re-derived under each prior. The vague $N(0, 10)$ is deliberately far more diffuse than the weakly regularising prior, placing almost no constraint on the treatment effect, so that the sensitivity analysis spans a genuinely wide range of prior belief.
 
-- P(Y ≥ 2): any PPC or death — equivalent to the original binary composite endpoint
-- P(Y ≥ 3): pneumonia or worse — excluding atelectasis to isolate clinically unambiguous complications
-- P(Y ≥ 4): ARDS or death
-- P(Y = 5): death
+### Region of Practical Equivalence — Grid Sensitivity Analysis
 
-**Log-odds ratios.** From the category-specific effects model, cumulative log-odds ratios were computed at each threshold from the marginalised predicted probabilities, allowing these to vary freely across severity levels.
+To assess whether any observed treatment effect was of sufficient magnitude to be clinically meaningful — as distinct from merely non-zero — we defined a region of practical equivalence (ROPE) around a null risk difference of zero @kruschke2018. For each estimand and each candidate ROPE half-width we report the posterior probability that the risk difference falls inside the ROPE, below it, and above it. Where the 95% highest density interval (HDI) falls entirely outside the ROPE we conclude the effect is practically meaningful; entirely inside, practical equivalence to no effect; otherwise indeterminate.
 
-### Model Fitting and Convergence
+No consensus ROPE exists for risk differences in the PPC literature, and the same absolute risk difference carries different clinical weight depending on outcome severity. Rather than commit to a single boundary, we present a **grid of ROPE half-widths** (from ±0.5 to ±10 percentage points) crossed against each outcome category. This lets each reader locate the threshold matching their own clinical tolerance: a cautious anaesthetist demanding a larger absolute benefit before changing practice reads a wider ROPE, whereas a reader for whom any reduction in a severe outcome is meaningful reads a narrower one. The grid is presented as a heatmap of posterior mass inside the ROPE, and conclusions are therefore reported as a function of the boundary rather than at a single pre-specified value.
 
-All models were fitted using the brms package (version 2.22) \[ref Bürkner 2017, 2018\] in R (version 4.4) \[ref R Core Team\], which implements Bayesian inference via Hamiltonian Monte Carlo using Stan \[ref Carpenter et al. 2017\]. We ran four randomly initialised Markov chains, each with 4000 iterations (1000 warmup), yielding 12,000 posterior draws per model. Convergence was assessed by examining R-hat statistics (all \< 1.01), effective sample sizes (bulk and tail ESS \> 400), the absence of divergent transitions, and visual inspection of trace plots.
+### Severity-Weighted Decision Analysis
 
-### Posterior Summaries
+The category-specific and cumulative estimands above quantify where in the severity distribution any treatment effect falls, but they do not collapse that information into a single decision-relevant quantity, nor do they weight each category by its clinical severity. A shift out of atelectasis and a shift out of death are reported on the same percentage-point scale despite being of profoundly different importance. To address this, we conducted an **expected disutility analysis** in which each outcome category is assigned a **disutility** — a value between 0 (no complication) and 1 (death) representing the health loss associated with that state. These disutilities constitute a loss function, and the analysis compares treatments by their posterior expected loss, selecting the arm that minimises the severity-weighted burden of complications. Whilst there are no examples in the perioprative literature, this methodology has been used in other patient cohorts with ordinal outcomes @chaisinanunkul2015.
 
-Posterior distributions of treatment effects were summarised using the median and 95% credible intervals (CrI). Evidence for treatment benefit at each threshold was quantified as the posterior probability that the risk difference was less than zero (i.e., that sugammadex reduced the probability of reaching that severity level or worse). For the overall treatment effect under the proportional odds model, we additionally report the posterior probability that the odds ratio is less than 1 and less than 0.8, representing any benefit and a clinically meaningful benefit, respectively.
+For each posterior draw we computed the expected disutility under each treatment arm as the sum across categories of the predicted category probability multiplied by that category's disutility, and took the difference (sugammadex − neostigmine). Category probabilities were taken from the category-specific (non-proportional) model, since the expected disutility depends on the full category-probability vector and this model allows each category's probability to move independently rather than imposing a single shared proportional-odds effect. A negative difference indicates that sugammadex reduces the expected disutility — that is, it lowers the average severity-weighted burden of pulmonary complications.
 
-### Region of Practical Equivalence
+The resulting quantity is a position on a continuous scale of severity-weighted harm, anchored at 0 (no complication) and 1 (death). It is not a count of any single outcome: a value such as −0.003 denotes a small average reduction in weighted harm per patient, distributed across the severity spectrum, and is meaningful only relative to the stated set of disutility weights. Because death is only one of the two anchors of this continuous scale, the difference should be read as a small shift in severity-weighted harm rather than as a number of deaths averted. This single number integrates over the whole ordinal distribution while respecting the ordering the risk-difference estimands treat as clinically flat.
 
-To assess whether any observed treatment effect was of sufficient magnitude to be considered clinically meaningful — as distinct from merely being non-zero — we defined a region of practical equivalence (ROPE) around the null value on both the log-odds ratio and risk difference scales \[ref Kruschke 2018; ref Kruschke & Liddell 2018\]. For each estimand, we report the proportion of the posterior distribution falling within the ROPE. If the 95% highest density interval (HDI) falls entirely outside the ROPE, we conclude that the effect is practically meaningful; if the HDI falls entirely within the ROPE, we conclude practical equivalence to no effect; otherwise, the result is indeterminate \[ref Kruschke 2018\].
+Because no disutility weights specific to postoperative pulmonary complications have been established, and because the interim analysis reported here uses only the published aggregate category counts, the weights used at this stage are provisional. We anchored them to external evidence combining case-fatality and health-utility (EQ-5D / QALY-decrement) data: atelectasis was assigned a near-zero disutility consistent with its transient and clinically uncertain nature; pneumonia or aspiration an intermediate value reflecting a burden that is largely acute and recovers; ARDS a high value reflecting both substantial acute mortality and a durable survivor quality-of-life decrement comparable to that of ischaemic stroke or heart failure; and death a disutility of 1 by definition @olesnicky2024. To avoid over-committing to any single set of values, three disutility profiles (conservative, central, and severe-weighted) were carried through as a sensitivity analysis spanning the plausible range.
 
-Log-odds ratio scale. For the log-odds ratio, we specified a ROPE of \[−0.105, 0.105\], corresponding to an odds ratio interval of \[0.90, 1.11\]. This boundary was informed by a pre-registered Bayesian individual patient data meta-analysis of intraoperative ventilation trials with a composite PPC primary endpoint (NCT05886387) \[ref\], which pre-specified a ROPE of OR 0.9 to 1.1 for the same outcome domain. This is narrower than the generic default of \[−0.18, 0.18\] proposed by Kruschke \[ref Kruschke 2018\] for logistic models (derived from the π/√3 transformation of a negligible standardised effect of ±0.1) but reflects a domain-specific judgment about the minimum odds ratio shift considered clinically important for postoperative pulmonary complications.
+R packages used in this analysis include tidyverse @wickham, ggplot2 @wickham2016, brms @bürkner2017, cmdstanR @gabry2025, Stan @lee2017, tidybayes @kay, posterior @bürkner2026, gt @iannone2022, tidytext @robinson and patchwork @pedersen. All analysis code is available at <https://github.com/BLMoran/SNaPP_Bayesian_Reanalysis>.
 
-Risk difference scale. No consensus ROPE exists for risk differences in the PPC literature. We therefore specified ROPE boundaries based on clinical reasoning, noting that the same absolute risk difference carries different clinical weight depending on the severity of the outcome. For the primary composite threshold (P(Y ≥ 2), any PPC or death), we pre-specified a ROPE of \[−2 percentage points, +2 percentage points\], reflecting a judgment that an absolute risk reduction of less than 2% in the composite — even if non-zero — would be of limited clinical importance given the burden of treatment change (i.e., routine adoption of sugammadex over neostigmine). For the clinically significant complications threshold (P(Y ≥ 3), pneumonia or worse), we narrowed the ROPE to \[−1 percentage point, +1 percentage point\], reflecting the greater clinical gravity of these outcomes, where even a small absolute risk reduction could be meaningful. We did not specify a ROPE for the ARDS/death threshold owing to the very low baseline event rates, where any non-trivial reduction in absolute risk would be clinically important. These boundaries should be interpreted as reflecting the investigators' clinical judgment and are presented alongside a sensitivity analysis in which we varied the ROPE width by ±50% (e.g., \[−1%, +1%\] and \[−3%, +3%\] for the composite threshold) to assess how conclusions depended on the chosen boundaries.
+```{r}
+#| label: setup
+#| cache: true
 
-All analysis code is publicly available at \[repository URL\].
+library(brms)
+library(tidyverse)
+library(tidybayes)
+library(patchwork)
+library(posterior)
+library(scales)
+library(gt)
+library(tidytext)
+
+knitr::opts_chunk$set(
+  error = TRUE, message = FALSE, warning = FALSE, cache = TRUE,
+  dev = "png", dpi = 300, out.width = "100%"
+)
+options(mc.cores = parallel::detectCores())
+set.seed(140412)
+
+outcome_labels <- c("None", "Atelectasis", "Pneumonia/Aspiration", "ARDS", "Death")
+
+dat <- tibble::tribble(
+  ~treatment,       ~None, ~Atelectasis, ~`Pneumonia/Aspiration`, ~ARDS, ~Death,
+  "neostigmine",     1480,          180,                      55,    20,     15,
+  "sugammadex",      1520,          155,                      48,    16,     11
+) |>
+  tidyr::pivot_longer(-treatment, names_to = "worst_outcome", values_to = "n") |>
+  dplyr::mutate(
+    worst_outcome = factor(worst_outcome, levels = outcome_labels, ordered = TRUE),
+    treatment     = factor(treatment, levels = c("neostigmine", "sugammadex"))
+  ) |>
+  tidyr::uncount(n)
+
+outcome <- dat |>
+  dplyr::count(treatment, worst_outcome) |>
+  dplyr::group_by(treatment) |>
+  dplyr::mutate(pct = n / sum(n) * 100, label = sprintf("%d (%.1f%%)", n, pct)) |>
+  dplyr::ungroup()
+```
+
+```{r}
+#| label: fit-models
+#| cache: true
+
+# --- Prior sensitivity set (proportional-odds treatment effect) --------------
+prior_specs <- list(
+  `Weakly Regularising` = brms::prior(normal(0, 1),    class = "b"),
+  `Vague`               = brms::prior(normal(0, 10),   class = "b"),
+  `Informative`         = brms::prior(normal(-0.4, 0.25), class = "b")
+)
+
+prior_files <- c(
+  `Weakly Regularising` = "fit_po_weakreg",
+  `Vague`               = "fit_po_vague",
+  `Informative`         = "fit_po_informative"
+)
+
+fit_po_list <- purrr::imap(prior_specs, \(b_prior, nm) {
+  brms::brm(
+    worst_outcome ~ treatment, data = dat,
+    family = brms::cumulative("logit"),
+    prior  = c(b_prior, brms::prior(normal(0, 2), class = "Intercept")),
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 42, silent = 2, refresh = 0, file = prior_files[[nm]]
+  )
+})
+
+# Primary model for headline estimands and the disutility analysis:
+# the weakly regularising proportional-odds fit.
+fit_po <- fit_po_list[["Weakly Regularising"]]
+
+# Category-specific (non-proportional) model, weakly regularising prior.
+fit_cs <- brms::brm(
+  worst_outcome ~ cs(treatment), data = dat,
+  family = brms::cumulative("logit"),
+  prior = c(brms::prior(normal(0, 1), class = "b"),
+            brms::prior(normal(0, 2), class = "Intercept")),
+  iter = 4000, warmup = 1000, chains = 4, cores = 4,
+  seed = 42, silent = 2, refresh = 0, file = "fit_cs"
+)
+```
+
+```{r}
+#| label: marginals-and-rd
+#| cache: true
+
+newdata <- tibble::tibble(
+  treatment = factor(c("neostigmine", "sugammadex"),
+                     levels = c("neostigmine", "sugammadex"))
+)
+
+get_marginals <- function(fit) {
+  pred <- brms::posterior_epred(fit, newdata = newdata)
+  list(
+    neo = purrr::set_names(purrr::map(1:5, \(k) pred[, 1, k]), outcome_labels),
+    sug = purrr::set_names(purrr::map(1:5, \(k) pred[, 2, k]), outcome_labels)
+  )
+}
+
+# Build the full set of RD draws (all 3 estimand families) from fit_po & fit_cs
+build_all_rd <- function(fit_po, fit_cs) {
+  marg_po <- get_marginals(fit_po)
+  marg_cs <- get_marginals(fit_cs)
+
+  cat_rd_po <- purrr::imap_dfr(outcome_labels, \(lab, k) {
+    tibble::tibble(
+      estimand = "Category-specific (PO)", label = lab, ordering = k,
+      rd = marg_po$sug[[lab]] - marg_po$neo[[lab]]
+    )
+  })
+
+  cat_rd_cs <- purrr::imap_dfr(outcome_labels, \(lab, k) {
+    tibble::tibble(
+      estimand = "Category-specific (non-PO)", label = lab, ordering = k,
+      rd = marg_cs$sug[[lab]] - marg_cs$neo[[lab]]
+    )
+  })
+
+  cum_rd <- purrr::map_dfr(2:5, \(k) {
+    cum_neo <- purrr::reduce(marg_cs$neo[k:5], `+`)
+    cum_sug <- purrr::reduce(marg_cs$sug[k:5], `+`)
+    tibble::tibble(
+      estimand = "Cumulative threshold",
+      label = dplyr::case_when(
+        k == 2 ~ "Any PPC or death (\u2265 Atelectasis)",
+        k == 3 ~ "Pneumonia or worse (\u2265 Pneumonia)",
+        k == 4 ~ "ARDS or death (\u2265 ARDS)",
+        k == 5 ~ "Death"
+      ),
+      ordering = k, rd = cum_sug - cum_neo
+    )
+  })
+
+  dplyr::bind_rows(cat_rd_po, cat_rd_cs, cum_rd) |>
+    dplyr::mutate(estimand = factor(estimand, levels = c(
+      "Category-specific (PO)", "Category-specific (non-PO)",
+      "Cumulative threshold")))
+}
+
+# Primary estimands: weakly regularising PO fit + category-specific fit.
+all_rd <- build_all_rd(fit_po, fit_cs)
+
+# Prior sensitivity
+all_rd_by_prior <- purrr::imap(fit_po_list, \(fit, nm) {
+  build_all_rd(fit, fit_cs) |> dplyr::mutate(prior = nm)
+})
+```
+
+```{r}
+#| label: rd-summary
+#| cache: true
+
+hdi <- function(x, prob = 0.95) {
+  x <- sort(x); n <- length(x); gap <- floor(prob * n)
+  i <- which.min(purrr::map_dbl(seq_len(n - gap), \(j) x[j + gap] - x[j]))
+  c(lower = x[i], upper = x[i + gap])
+}
+
+summarise_rd <- function(rd_df) {
+  rd_df |>
+    dplyr::group_by(estimand, label, ordering) |>
+    dplyr::summarise(
+      median_rd = median(rd),
+      hdi_lo    = hdi(rd)[[1]],
+      hdi_hi    = hdi(rd)[[2]],
+      p_benefit = if (label[1] == "None") mean(rd > 0) else mean(rd < 0),
+      .groups   = "drop"
+    ) |>
+    dplyr::arrange(ordering)
+}
+
+rd_summary <- summarise_rd(all_rd)
+```
+
+```{r}
+#| label: rope-grid
+#| cache: true
+
+rope_grid <- c(0, 0.0025, 0.005, 0.01, 0.02, 0.03, 0.05)
+
+rope_summary <- tidyr::expand_grid(
+  estimand   = unique(all_rd$estimand),
+  outcome    = unique(all_rd$label),
+  rope_bound = rope_grid
+) |>
+  dplyr::mutate(
+    stats = purrr::pmap(list(estimand, outcome, rope_bound), \(est, out, bound) {
+      rd <- all_rd$rd[all_rd$estimand == est & all_rd$label == out]
+      if (length(rd) == 0)
+        return(tibble::tibble(p_in_rope = NA, p_below = NA, p_above = NA,
+                              p_benefit_side = NA, p_harm_side = NA))
+      # For "None", benefit is a positive RD; for all others, benefit is negative RD.
+      benefit_up <- identical(out, "None")
+      tibble::tibble(
+        p_in_rope      = mean(dplyr::between(rd, -bound, bound)),
+        p_below        = mean(rd < -bound),
+        p_above        = mean(rd > bound),
+        p_benefit_side = if (benefit_up) mean(rd > bound) else mean(rd < -bound),
+        p_harm_side    = if (benefit_up) mean(rd < -bound) else mean(rd > bound)
+      )
+    })
+  ) |>
+  tidyr::unnest(stats) |>
+  dplyr::filter(!is.na(p_in_rope))
+```
+
+```{r}
+#| label: heatmap-fn
+
+# ROPE heatmap table
+rope_heatmap <- function(rope_summary,
+                         value    = p_in_rope,
+                         row_var  = outcome,
+                         ordering = NULL,
+                         low      = "#E6F1FB",
+                         high     = "#185FA5",
+                         title    = "Posterior mass inside the ROPE",
+                         subtitle = "P(|risk difference| < bound) by outcome and ROPE half-width") {
+
+  value   <- rlang::ensym(value)
+  row_var <- rlang::ensym(row_var)
+
+  df <- rope_summary |>
+    dplyr::mutate(
+      bound_lab = dplyr::if_else(
+        rope_bound == 0, "0% (null)",
+        paste0("\u00B1", format(rope_bound * 100, trim = TRUE, drop0trailing = TRUE), "%"))
+    )
+
+  if (!is.null(ordering)) {
+    df <- df |> dplyr::mutate(!!row_var := forcats::fct_reorder(
+      as.character(!!row_var), .data[[ordering]]))
+  }
+
+  bound_levels <- df |>
+    dplyr::distinct(rope_bound, bound_lab) |>
+    dplyr::arrange(dplyr::desc(rope_bound)) |>
+    dplyr::pull(bound_lab)
+
+  wide <- df |>
+    dplyr::group_by(!!row_var, bound_lab) |>
+    dplyr::summarise(val = mean(!!value), .groups = "drop") |>
+    tidyr::pivot_wider(names_from = bound_lab, values_from = val) |>
+    dplyr::select(!!row_var, dplyr::all_of(bound_levels))
+
+  tbl <- wide |>
+    gt::gt(rowname_col = rlang::as_string(row_var)) |>
+    gt::tab_header(title = title, subtitle = subtitle) |>
+    gt::tab_spanner(label = "ROPE half-width", columns = dplyr::all_of(bound_levels)) |>
+    gt::fmt_number(columns = dplyr::all_of(bound_levels), decimals = 2) |>
+    gt::data_color(
+      columns = dplyr::all_of(bound_levels),
+      fn = scales::col_numeric(palette = c(low, high), domain = c(0, 1))
+    ) |>
+    gt::cols_align(align = "center", columns = dplyr::all_of(bound_levels))
+
+  # Per-cell text colour for legibility: white on dark (high) cells,
+  # dark-blue on pale (low, < 0.2) cells.
+  for (cc in bound_levels) {
+    hi_rows <- which(wide[[cc]] > 0.55)
+    lo_rows <- which(wide[[cc]] < 0.20)
+    if (length(hi_rows) > 0) {
+      tbl <- tbl |> gt::tab_style(
+        style = gt::cell_text(color = "white"),
+        locations = gt::cells_body(columns = cc, rows = hi_rows))
+    }
+    if (length(lo_rows) > 0) {
+      tbl <- tbl |> gt::tab_style(
+        style = gt::cell_text(color = high, weight = "bold"),
+        locations = gt::cells_body(columns = cc, rows = lo_rows))
+    }
+  }
+
+  tbl |>
+    gt::opt_stylize(style = 1) |>
+    gt::tab_options(table.font.size = gt::px(13)) |>
+    gt::opt_css(css = "
+      .gt_table td.gt_cell {
+        border-radius: 6px;
+        border: 3px solid transparent;
+        background-clip: padding-box;
+      }
+    ", add = TRUE)
+}
+```
+
+# Results
+
+In total, `r nrow(dat)` patients were analysed: `r sum(dat$treatment == "neostigmine")` in the neostigmine group and `r sum(dat$treatment == "sugammadex")` in the sugammadex group.
+
+## Postoperative Pulmonary Complications
+
+Overall, `r sum(outcome$n[2:5])` patients in the neostigmine group and `r sum(outcome$n[7:10])` in the sugammadex group had a postoperative pulmonary complication. The distribution by category is shown below.
+
+::: panel-tabset
+## PPC Table
+
+```{r}
+#| label: tbl-ppc
+#| tbl-cap: "Postoperative Pulmonary Complications by Treatment Group"
+
+outcome |>
+  dplyr::select(treatment, worst_outcome, label) |>
+  tidyr::pivot_wider(names_from = treatment, values_from = label) |>
+  gt::gt() |>
+  gt::cols_label(
+    worst_outcome = "Postoperative Pulmonary Complication",
+    neostigmine   = "Neostigmine",
+    sugammadex    = "Sugammadex"
+  ) |>
+  gt::tab_spanner(label = "Intervention", columns = c(neostigmine, sugammadex))
+```
+
+## PPC Plot
+
+```{r}
+#| label: fig-outcome
+#| fig-cap: "Proportion of patients with a PPC by treatment group"
+#| fig-height: 5
+#| fig-width: 10
+
+ggplot2::ggplot(outcome, ggplot2::aes(x = worst_outcome, y = pct, fill = treatment)) +
+  ggplot2::geom_col(position = "dodge", width = 0.7) +
+  ggplot2::geom_text(ggplot2::aes(label = sprintf("%.1f%%", pct)),
+    position = ggplot2::position_dodge(width = 0.7), vjust = -0.5, size = 3.2) +
+  ggplot2::scale_fill_manual(
+    values = c("neostigmine" = "#E69F00", "sugammadex" = "#0072B2"),
+    labels = c("neostigmine" = "Neostigmine", "sugammadex" = "Sugammadex")) +
+  ggplot2::scale_x_discrete(labels = c("Pneumonia/Aspiration" = "Pneumonia/\nAspiration")) +
+  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.08))) +
+  ggplot2::labs(title = "Outcome Distribution by Treatment Arm",
+    x = "Postoperative Pulmonary Complication", y = "Percentage (%)", fill = "Treatment") +
+  ggplot2::theme_minimal(base_size = 13) +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(hjust = 0.5))
+```
+:::
+
+## Risk Differences by Estimand
+
+```{r}
+#| label: rd-display-fns
+
+# RD table function
+rd_table <- function(rd_sum,
+                     title = "Treatment Effects on the Risk-Difference Scale",
+                     subtitle = "Category-specific and cumulative-threshold estimands") {
+  rd_sum |>
+    dplyr::transmute(
+      Estimand = estimand,
+      Outcome  = label,
+      `RD (%)` = sprintf("%.2f", median_rd * 100),
+      `95% HDI` = sprintf("%.2f to %.2f", hdi_lo * 100, hdi_hi * 100),
+      `P(benefit)` = sprintf("%.1f%%", p_benefit * 100)
+    ) |>
+    gt::gt(groupname_col = "Estimand") |>
+    gt::tab_header(title = title, subtitle = subtitle) |>
+    gt::tab_footnote("Negative RD favours sugammadex for all outcomes except \"None\", where a positive RD is favourable. P(benefit) is oriented accordingly: P(RD > 0) for \"None\", P(RD < 0) otherwise.") |>
+    gt::opt_stylize(style = 1) |>
+    gt::tab_options(table.font.size = gt::px(13))
+}
+
+# Reusable RD forest / density plot from a full RD draws data frame.
+rd_forest <- function(rd_df, xlim_shared = NULL) {
+  rd_plot <- rd_df |>
+    dplyr::mutate(
+      rd_dir = dplyr::if_else(label == "None", -rd, rd),
+      label  = tidytext::reorder_within(label, ordering, estimand)
+    )
+  x_rng <- if (is.null(xlim_shared)) {
+  m <- max(abs(rd_plot$rd_dir)); c(-m, m)
+  } else if (length(xlim_shared) == 1) {
+    c(-xlim_shared, xlim_shared)
+  } else {
+    xlim_shared
+  }
+
+  rd_plot |>
+    ggplot2::ggplot(ggplot2::aes(x = rd_dir, y = label,
+      fill = ggplot2::after_stat(x < 0))) +
+    tidybayes::stat_halfeye(
+      fill_type = "gradient", slab_alpha = 0.7, normalize = "groups",
+      scale = 0.9, point_size = 2.5, interval_size = 1.2,
+      .width = c(0.50, 0.95)) +
+    ggplot2::geom_vline(xintercept = 0, colour = "grey20", linewidth = 0.7) +
+    ggplot2::annotate("text", x = x_rng[1], y = Inf, label = "Favours Sugammadex",
+      hjust = 0, vjust = 1.5, size = 3.2, colour = "grey30", fontface = "italic") +
+    ggplot2::annotate("text", x = x_rng[2], y = Inf, label = "Favours Neostigmine",
+      hjust = 1, vjust = 1.5, size = 3.2, colour = "grey30", fontface = "italic") +
+    ggplot2::scale_fill_manual(
+      values = c(`TRUE` = "#0072B2", `FALSE` = "#F4A6A6"), guide = "none") +
+    tidytext::scale_y_reordered() +
+    ggplot2::scale_x_continuous(
+      labels = \(x) scales::percent(abs(x), accuracy = 0.1),
+      breaks = scales::breaks_pretty(n = 6), limits = x_rng) +
+    ggplot2::facet_wrap(~ estimand, scales = "free_y", ncol = 1) +
+    ggplot2::labs(x = "Absolute Risk Difference (RD)", y = NULL) +
+    ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+    panel.grid.minor = ggplot2::element_blank(),
+    plot.caption = ggplot2::element_text(colour = "grey40", hjust = 0),
+    axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10)),
+    strip.text = ggplot2::element_text(
+      face = "bold",
+      margin = ggplot2::margin(b = 8)), 
+    panel.spacing = ggplot2::unit(1.5, "lines"))
+}
+```
+
+```{r}
+#| label: tbl-rd
+#| tbl-cap: "Absolute risk differences (sugammadex − neostigmine), posterior median and 95% HDI"
+
+rd_table(rd_summary)
+```
+
+```{r}
+#| label: fig-rd-forest
+#| fig-cap: "Posterior risk differences by estimand (median, 50% and 95% credible intervals)"
+#| fig-height: 7
+#| fig-width: 10
+
+rd_forest(all_rd, xlim_shared = c(-0.06, 0.025))
+```
+
+## Prior Sensitivity Analysis
+
+The full set of risk-difference estimands is re-derived under each of the three priors on the treatment effect. The weakly regularising prior ($N(0, 1)$) is the primary specification; the vague prior ($N(0, 10)$) imposes almost no constraint; the informative prior ($N(−0.4, 0.25)$) encodes the meta-analytic expectation of benefit. Each panel shows the same table and density plot as above. Concordance across panels indicates the conclusions are driven by the data rather than the prior.
+
+```{r}
+#| label: prior-sensitivity-summaries
+
+rd_summary_by_prior <- purrr::map(all_rd_by_prior, summarise_rd)
+```
+
+::: panel-tabset
+### Weakly Regularising
+
+```{r}
+#| label: tbl-rd-weakreg
+#| tbl-cap: "Risk differences under the weakly regularising prior, Normal(0, 1)"
+
+rd_table(rd_summary_by_prior[["Weakly Regularising"]],
+         subtitle = "Weakly regularising prior — Normal(0, 1)")
+```
+
+```{r}
+#| label: fig-rd-weakreg
+#| fig-cap: "Posterior risk differences under the weakly regularising prior, Normal(0, 1)"
+#| fig-height: 7
+#| fig-width: 10
+
+rd_forest(all_rd_by_prior[["Weakly Regularising"]], xlim_shared = c(-0.06, 0.025))
+```
+
+### Vague
+
+```{r}
+#| label: tbl-rd-vague
+#| tbl-cap: "Risk differences under the vague prior, Normal(0, 10)"
+
+rd_table(rd_summary_by_prior[["Vague"]],
+         subtitle = "Vague prior — Normal(0, 10)")
+```
+
+```{r}
+#| label: fig-rd-vague
+#| fig-cap: "Posterior risk differences under the vague prior, Normal(0, 10)"
+#| fig-height: 7
+#| fig-width: 10
+
+rd_forest(all_rd_by_prior[["Vague"]], xlim_shared = c(-0.06, 0.025))
+```
+
+### Informative
+
+```{r}
+#| label: tbl-rd-informative
+#| tbl-cap: "Risk differences under the informative prior, Normal(−0.4, 0.25)"
+
+rd_table(rd_summary_by_prior[["Informative"]],
+         subtitle = "Informative prior — Normal(\u22120.4, 0.25)")
+```
+
+```{r}
+#| label: fig-rd-informative
+#| fig-cap: "Posterior risk differences under the informative prior, Normal(−0.4, 0.25)"
+#| fig-height: 7
+#| fig-width: 10
+
+rd_forest(all_rd_by_prior[["Informative"]], xlim_shared = c(-0.06, 0.025))
+```
+:::
+
+## ROPE Sensitivity Analysis
+
+Rather than fix a single ROPE, we cross each outcome against a grid of half-widths. For a chosen boundary, the clinically relevant quantity is the posterior mass lying *beyond* it in the favourable direction — the probability that sugammadex confers a benefit at least as large as that threshold. Each cell below is that benefit-side mass, oriented per category (for "None" a positive risk difference is favourable; for all other categories a negative one is). A reader locates the column matching their own clinical tolerance and reads down; darker cells indicate stronger evidence of a benefit exceeding that threshold. The mass inside the ROPE is not tabulated, as it is not clinically actionable once a threshold is set.
+
+The density plot below shows each posterior with the candidate ROPE half-widths overlaid as dashed lines, so the tabulated masses can be read directly off the distributions.
+
+```{r}
+#| label: fig-rope-density
+#| fig-cap: "Posterior risk-difference densities with candidate ROPE bands shaded. Mass beyond a band edge is what the ROPE tables report."
+#| fig-height: 9
+#| fig-width: 10
+
+edges <- sort(rope_grid[rope_grid > 0])
+bound_lines <- tibble::tibble(x = c(-edges, edges))
+brks <- c(0, edges, Inf)
+rope_breaks <- c(-edges, 0, edges)
+all_rd |>
+  dplyr::mutate(
+    rd_dir = dplyr::if_else(label == "None", -rd, rd),
+    label  = tidytext::reorder_within(label, ordering, estimand)
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(x = rd_dir, y = label)) +
+  ggplot2::geom_vline(xintercept = 0, colour = "grey20", linewidth = 0.7) +
+  ggplot2::geom_vline(data = bound_lines,
+    ggplot2::aes(xintercept = x), linetype = "dashed",
+    colour = "grey55", linewidth = 0.35) +
+  tidybayes::stat_slab(
+    ggplot2::aes(
+      fill = ggplot2::after_stat(x < 0),
+      fill_ramp = ggplot2::after_stat(
+        as.integer(cut(abs(x), breaks = brks, include.lowest = TRUE)))),
+    normalize = "groups", scale = 0.9) +
+  ggplot2::annotate("text", x = -0.06, y = Inf, label = "Favours Sugammadex",
+    hjust = 0, vjust = 1.5, size = 3.2, colour = "grey30", fontface = "italic") +
+  ggplot2::annotate("text", x = 0.035, y = Inf, label = "Favours Neostigmine",
+    hjust = 1, vjust = 1.5, size = 3.2, colour = "grey30", fontface = "italic") +
+  ggplot2::scale_fill_manual(
+    values = c(`TRUE` = "#0072B2", `FALSE` = "#D66A6A"), guide = "none") +
+  ggdist::scale_fill_ramp_continuous(
+    range = c(1, 0.25), guide = "none") + 
+  tidytext::scale_y_reordered() +
+  ggplot2::scale_x_continuous(
+    labels = \(x) scales::percent(abs(x), accuracy = 0.1),
+    breaks = rope_breaks, limits = c(-0.06, 0.035),
+    oob = scales::oob_keep) +
+  ggplot2::facet_wrap(~ estimand, scales = "free_y", ncol = 1) +
+  ggplot2::labs(x = "Absolute Risk Difference (RD)", y = NULL) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    panel.grid = ggplot2::element_blank(),
+    plot.caption = ggplot2::element_text(colour = "grey40", hjust = 0),
+    axis.text.x = ggplot2::element_text(size = 7, angle = 45, hjust = 1),
+    axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10)),
+    strip.text = ggplot2::element_text(
+      face = "bold",
+      margin = ggplot2::margin(b = 8)), 
+    panel.spacing = ggplot2::unit(1.5, "lines"))
+```
+
+```{r}
+#| label: tbl-rope-cat-po
+#| tbl-cap: "ROPE grid — benefit-side mass, category-specific (proportional odds)"
+
+ord_lookup <- rd_summary |> dplyr::distinct(label, ordering)
+
+cat_outcomes <- c("None", "Atelectasis", "Pneumonia/Aspiration", "ARDS", "Death")
+
+rope_summary |>
+  dplyr::filter(estimand == "Category-specific (PO)", outcome %in% cat_outcomes) |>
+  dplyr::left_join(ord_lookup, by = c("outcome" = "label")) |>
+  rope_heatmap(
+    value = p_benefit_side, row_var = outcome, ordering = "ordering",
+    title = "Posterior mass favouring sugammadex beyond the ROPE",
+    subtitle = "P(benefit > bound) — category-specific, proportional odds"
+  )
+```
+
+```{r}
+#| label: tbl-rope-cat-nonpo
+#| tbl-cap: "ROPE grid — benefit-side mass, category-specific (non-proportional odds)"
+
+rope_summary |>
+  dplyr::filter(estimand == "Category-specific (non-PO)", outcome %in% cat_outcomes) |>
+  dplyr::left_join(ord_lookup, by = c("outcome" = "label")) |>
+  rope_heatmap(
+    value = p_benefit_side, row_var = outcome, ordering = "ordering",
+    title = "Posterior mass favouring sugammadex beyond the ROPE",
+    subtitle = "P(benefit > bound) — category-specific, non-proportional"
+  )
+```
+
+```{r}
+#| label: tbl-rope-cum
+#| tbl-cap: "ROPE grid — benefit-side mass, cumulative thresholds"
+
+rope_summary |>
+  dplyr::filter(estimand == "Cumulative threshold") |>
+  dplyr::left_join(ord_lookup, by = c("outcome" = "label")) |>
+  rope_heatmap(
+    value = p_benefit_side, row_var = outcome, ordering = "ordering",
+    title = "Posterior mass favouring sugammadex beyond the ROPE",
+    subtitle = "P(benefit > bound) — cumulative thresholds"
+  )
+```
+
+## Severity-Weighted Decision Analysis
+
+The risk-difference estimands above locate any treatment effect within the severity distribution but do not weight the categories by their clinical importance. The analysis below collapses the whole ordinal distribution into a single severity-weighted quantity — the expected disutility — and reports the treatment effect on that scale. Negative values favour sugammadex.
+
+```{r}
+#| label: disutility-setup
+#| cache: true
+
+# Provisional evidence-anchored disutility profiles
+
+profile_levels <- c("Conservative", "Central", "Severe-weighted")
+
+profiles <- tibble::tribble(
+  ~profile,          ~None, ~Atelectasis, ~`Pneumonia/Aspiration`, ~ARDS, ~Death,
+  "Conservative",        0,         0.02,                    0.10,   0.55,      1,
+  "Central",             0,         0.035,                   0.175,  0.625,     1,
+  "Severe-weighted",     0,         0.05,                    0.25,   0.70,      1
+) |>
+  tidyr::pivot_longer(
+    -profile, names_to = "worst_outcome", values_to = "disutility"
+  ) |>
+  dplyr::mutate(
+    profile       = factor(profile, levels = profile_levels),
+    worst_outcome = factor(worst_outcome, levels = outcome_labels)
+  )
+
+# Posterior category probabilities per arm (fit_cs)
+du_probs <- newdata |>
+  tidybayes::add_epred_draws(fit_cs, category = "worst_outcome") |>
+  dplyr::mutate(worst_outcome = factor(worst_outcome, levels = outcome_labels))
+
+# Expected disutility per arm
+du_effect <- du_probs |>
+  dplyr::inner_join(profiles, by = "worst_outcome",
+                    relationship = "many-to-many") |>
+  dplyr::group_by(profile, .draw, treatment) |>
+  dplyr::summarise(eu = sum(.epred * disutility), .groups = "drop") |>
+  tidyr::pivot_wider(names_from = treatment, values_from = eu) |>
+  dplyr::mutate(diff = sugammadex - neostigmine)   # < 0 favours sugammadex
+
+# Reference boundaries
+ref_bounds <- c(0.001, 0.002, 0.003, 0.005)
+
+du_summary <- du_effect |>
+  dplyr::group_by(profile) |>
+  dplyr::summarise(
+    median    = median(diff),
+    hdi_lo    = hdi(diff)[[1]],
+    hdi_hi    = hdi(diff)[[2]],
+    p_benefit = mean(diff < 0),
+    .groups = "drop"
+  )
+```
+
+The posterior of the expected-disutility difference is shown for each severity profile. Shading matches the ROPE analysis above: darker blue lies nearer the null, lighter blue further into the benefit region. Dashed lines mark illustrative reference points on the disutility scale.
+
+```{r}
+#| label: fig-disutility
+#| fig-cap: "Posterior expected-disutility difference (sugammadex − neostigmine) by severity profile. Negative favours sugammadex."
+#| fig-height: 5
+#| fig-width: 10
+
+du_edges  <- sort(ref_bounds)
+du_brks   <- c(0, du_edges, Inf)
+du_lines  <- tibble::tibble(x = c(-du_edges, du_edges))
+
+du_effect |>
+  ggplot2::ggplot(ggplot2::aes(x = diff, y = profile)) +
+  ggplot2::geom_vline(xintercept = 0, colour = "grey20", linewidth = 0.7) +
+  ggplot2::geom_vline(data = du_lines, ggplot2::aes(xintercept = x),
+    linetype = "dashed", colour = "grey55", linewidth = 0.35) +
+  tidybayes::stat_slab(
+    ggplot2::aes(fill_ramp = ggplot2::after_stat(
+      as.integer(cut(abs(x), breaks = du_brks, include.lowest = TRUE)))),
+    fill = "#185FA5", normalize = "groups", scale = 0.9) +
+  ggdist::scale_fill_ramp_continuous(
+    range = c(1, 0.2), guide = "none") +
+  ggplot2::scale_x_continuous(
+    labels = \(x) scales::number(x, accuracy = 0.001),
+    breaks = scales::breaks_pretty(n = 7)) +
+  ggplot2::labs(
+    x = "\u0394 expected disutility (Sugammadex \u2212 Neostigmine)",
+    y = "Severity profile",
+    caption = "Scale runs from 0 (no complication) to 1 (death)") +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    panel.grid.minor = ggplot2::element_blank(),
+    plot.caption = ggplot2::element_text(colour = "grey40", hjust = 0),
+    axis.text.x = ggplot2::element_text(size = 7, angle = 45, hjust = 1),
+    axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10)),
+    strip.text = ggplot2::element_text(
+      face = "bold",
+      margin = ggplot2::margin(b = 8)), 
+    panel.spacing = ggplot2::unit(1.5, "lines"))
+```
+
+```{r}
+#| label: tbl-disutility-summary
+#| tbl-cap: "Expected-disutility difference (Sugammadex − Neostigmine) by severity profile"
+
+du_summary |>
+  dplyr::transmute(
+    Profile = profile,
+    `Median Δ disutility` = sprintf("%.4f", median),
+    `95% HDI` = sprintf("%.4f to %.4f", hdi_lo, hdi_hi),
+    `P(benefit)` = sprintf("%.1f%%", 100 * p_benefit)
+  ) |>
+  gt::gt() |>
+  gt::tab_header(
+    title = "Severity-Weighted Decision Analysis",
+    subtitle = "Expected-disutility difference across disutility profiles"
+  ) |>
+  gt::tab_footnote("Negative values indicate sugammadex lowers the severity-weighted burden of pulmonary complications. Disutility weights are provisional (see Methods).") |>
+  gt::opt_stylize(style = 1) |>
+  gt::tab_options(table.font.size = gt::px(13))
+```
+
+# Interpretation
+
+## Principal Findings
+
+- Across every estimand, the direction of effect favoured sugammadex, but the magnitude was small and concentrated at the mild end of the severity spectrum.
+- The reduction in complications is driven predominantly by fewer cases of atelectasis — the least severe, least clinically consequential category — with progressively smaller and more uncertain differences for pneumonia/aspiration, ARDS, and death.
+- This is the pattern a binary composite conceals: counting any complication equally lets a shift in radiographic atelectasis register with the same weight as a prevented death.
+- The ROPE analysis makes the tension explicit — the probability of *some* benefit is high, but the probability of a benefit exceeding any clinically meaningful boundary falls steeply as the boundary widens.
+- For the more severe categories, most of the posterior mass sits close to the null, so evidence for a benefit large enough to matter is weak once more than a fraction of a percentage point of absolute risk reduction is demanded.
+
+## The Severity-Weighted View
+
+- The expected disutility analysis collapses the whole ordinal distribution into a single severity-weighted quantity.
+- The posterior difference favoured sugammadex under all three profiles, but the effect was small on the disutility scale — a position near the null on a continuum of weighted harm, not a count of any outcome.
+- Its size depended on the weights — the severe-weighted profile (more importance on ARDS and death) sat slightly further from the null than the conservative one — but under no profile did it reach a magnitude that would be considered large.
+- Crucially, the advantage is not generated by preventing the outcomes clinicians care about most: because atelectasis carries near-zero disutility, the categories that actually move the difference are pneumonia, aspiration, and ARDS — exactly where the evidence is weakest.
+- A decision-maker who regards atelectasis as unimportant, and who requires benefit in the severe categories before changing practice, will find the case for sugammadex weaker than the headline composite result implies.
+
+## Limitations of the Interim (Aggregate-Data) Analysis
+
+- **Reconstruction from marginal totals.** The ordinal outcome is built from published category counts, so the joint structure of complications within patients cannot be recovered; the "worst outcome" classification is imposed on aggregates rather than derived per patient.
+- **No site-level clustering.** The random-intercept structure of the multicentre trial is omitted, so the posterior intervals are narrower than a hierarchical analysis would yield.
+- **Provisional weights.** The disutility weights are external anchors, not values derived from the trial population; the three-profile sensitivity analysis brackets this uncertainty but does not eliminate it.
+
+# The Definitive Individual-Patient-Data Analysis
+
+The analysis presented here is an interim reanalysis built from the published aggregate data. A definitive analysis using the individual patient data (IPD) from the SNaPP trial is planned and will differ in several material respects, each expected to strengthen the inference rather than merely reproduce it.
+
+## Empirically Anchored Disutilities
+
+- The disutility weights will no longer be borrowed from external literature. SNaPP collected EQ-5D-5L utilities at baseline and three months.
+- For each patient, a within-trial utility decrement (baseline minus three-month utility) can be computed and conditioned on their worst complication; the mean decrement per category gives a weight derived from the trial's own population, on the same quality-adjusted scale.
+- This removes reliance on proxy cohorts from different populations and care settings.
+- Death (few patients) stays fixed at a disutility of 1 by definition, rather than estimated.
+- The full posterior uncertainty of these empirical weights can be propagated into the expected-disutility difference, so uncertainty in the weights and in the outcome probabilities is represented jointly — replacing the small grid of assumed profiles.
+
+## Hierarchical Structure and Patient-Level Covariates
+
+- Site-level random intercepts can respect the multicentre design, and the model can adjust for the stratification and prognostic covariates recorded in the trial.
+- This will typically *widen* the posterior intervals relative to the present analysis — appropriately, since the aggregate reconstruction understates uncertainty by ignoring clustering — while removing residual confounding structure surviving at the aggregate level.
+
+## Correct Handling of Within-Patient Outcomes and Missingness
+
+- Each patient's worst outcome can be classified directly from their record rather than inferred from marginal totals.
+- The pattern of missing three-month EQ-5D data can be characterised — including whether missingness varies by complication category, which bears directly on whether the severe-category disutilities are biased.
+- The horizon of the decrement (baseline to three months) will be stated explicitly; because it may not capture durable deficits in ARDS survivors, a sensitivity analysis extending the ARDS disutility toward its longer-term burden is anticipated.
+
+## Summary of Expected Differences
+
+- The present analysis establishes the *method* and the qualitative message — a directionally favourable but small, mild-end-concentrated effect — using aggregate data.
+- The definitive IPD analysis will replace provisional weights with trial-derived health utilities, restore the hierarchical and covariate structure of the original design, and propagate all sources of uncertainty coherently.
+- The interim analysis should therefore be read as a proof of concept and a framework for interpretation, not as the final quantification of the severity-weighted treatment effect.
 
 # References
 
