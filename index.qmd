@@ -1,15 +1,14 @@
 ---
 title: "Sugammadex Versus Neostigmine for Reversal of Neuromuscular Blockade and Pulmonary Complications"
-subtitle: "A Post-Hoc Bayesian Ordinal Reanalysis of Aggregate Data"
+subtitle: "A Post-Hoc Bayesian Ordinal Reanalysis of Aggregate Data from the SNaPP Trial"
 author: <span style="font-size:125%;">Dr Benjamin Moran</span> <br> MBBS, BMedSci(Hons), MSc(Stats), FCICM, FANZCA
-date: today
 format:
   html:
     embed-resources: true
     grid:
       body-width: 1200px
       sidebar-width: 300px
-      margin-width: 100px
+      margin-width: 250px
       gutter-width: 0.5rem
     citations-hover: true
     theme:
@@ -19,7 +18,7 @@ execute:
   warning: false
   message: false
 toc: true
-toc-location: left
+toc-location: right
 toc-depth: 4
 number-sections: true
 bibliography: references.bib
@@ -78,7 +77,7 @@ $$\text{logit}[P(Y \le k)] = \alpha_k - \beta_k \cdot \text{treatment}, \quad k 
 
 We compared the two models using leave-one-out cross-validation (LOO-CV) via Pareto smoothed importance sampling.
 
-### Estimands — Risk Differences Only
+### Estimands — Risk Difference (RD)
 
 In contrast to the odds-ratio scale, which is non-collapsible and less directly interpretable at the bedside, this reanalysis reports treatment effects exclusively as **absolute risk differences (RD)** obtained by marginal standardisation (g-computation). For each posterior draw we predicted category probabilities under both counterfactual treatments, averaged across the patient population, and took the difference. A negative RD indicates that sugammadex reduces the probability of that outcome.
 
@@ -98,7 +97,9 @@ For the four complication categories a negative RD is favourable (sugammadex red
 
 ### Prior Specification
 
-Three prior distributions were placed on the treatment effect (log-odds scale) for the proportional odds model: a **weakly regularising** $N(0, 1)$, a **vague** $N(0, 10)$, and an **informative** $N(−0.4, 0.25)$ derived from a meta-analytic pooled OR of 0.67 for PPCs @olesnicky2024. Threshold parameters received $N(0, 2)$ priors. The weakly regularising prior is used for the primary RD estimands; all three inform the prior sensitivity analysis, in which the full set of estimands is re-derived under each prior. The vague $N(0, 10)$ is deliberately far more diffuse than the weakly regularising prior, placing almost no constraint on the treatment effect, so that the sensitivity analysis spans a genuinely wide range of prior belief.
+Three prior distributions were placed on the treatment-effect coefficient(s) (log-odds scale): a **weakly regularising** $N(0,1)$, a **vague** $N(0,10)$, and an **informative** $N(−0.4,0.25)$ derived from a meta-analytic pooled OR of 0.67 for PPCs @olesnicky2024. The same three priors were applied to both the proportional-odds and the category-specific models — in the former to the single shared coefficient, and in the latter to each category-specific coefficient, placing the same expectation on every threshold contrast. The weakly regularising prior served as the primary specification for the RD estimands; all three were carried through the prior sensitivity analysis, in which the full set of estimands was re-derived under each, with the proportional-odds and category-specific models refit under matching priors so that every estimand responds to the prior. The vague $N(0,10)$ is deliberately far more diffuse than the weakly regularising prior, placing almost no constraint on the treatment effect, so that the sensitivity analysis spans a genuinely wide range of prior belief.
+
+Threshold parameters received a $N(0,2)$ prior, a weakly informative choice that mildly regularises the cutpoints for the sparsely populated ARDS and death categories — gently shrinking their baseline probabilities away from the extreme tails — while remaining dominated by the likelihood at this sample size.
 
 ### Region of Practical Equivalence — Grid Sensitivity Analysis
 
@@ -163,42 +164,39 @@ outcome <- dat |>
 #| label: fit-models
 #| cache: true
 
-# --- Prior sensitivity set (proportional-odds treatment effect) --------------
+# Prior sensitivity
 prior_specs <- list(
-  `Weakly Regularising` = brms::prior(normal(0, 1),    class = "b"),
-  `Vague`               = brms::prior(normal(0, 10),   class = "b"),
+  `Weakly Regularising` = brms::prior(normal(0, 1),      class = "b"),
+  `Vague`               = brms::prior(normal(0, 10),     class = "b"),
   `Informative`         = brms::prior(normal(-0.4, 0.25), class = "b")
 )
 
-prior_files <- c(
-  `Weakly Regularising` = "fit_po_weakreg",
-  `Vague`               = "fit_po_vague",
-  `Informative`         = "fit_po_informative"
-)
-
+# Proportional-odds fits under each prior.
 fit_po_list <- purrr::imap(prior_specs, \(b_prior, nm) {
   brms::brm(
     worst_outcome ~ treatment, data = dat,
     family = brms::cumulative("logit"),
     prior  = c(b_prior, brms::prior(normal(0, 2), class = "Intercept")),
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
-    seed = 42, silent = 2, refresh = 0, file = prior_files[[nm]]
+    seed = 42, silent = 2, refresh = 0
   )
 })
 
-# Primary model for headline estimands and the disutility analysis:
-# the weakly regularising proportional-odds fit.
-fit_po <- fit_po_list[["Weakly Regularising"]]
+# Category-specific (non-PO) fits under each prior.
+fit_cs_list <- purrr::imap(prior_specs, \(b_prior, nm) {
+  brms::brm(
+    worst_outcome ~ cs(treatment), data = dat,
+    family = brms::cumulative("logit"),
+    prior  = c(b_prior, brms::prior(normal(0, 2), class = "Intercept")),
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 42, silent = 2, refresh = 0
+  )
+})
 
-# Category-specific (non-proportional) model, weakly regularising prior.
-fit_cs <- brms::brm(
-  worst_outcome ~ cs(treatment), data = dat,
-  family = brms::cumulative("logit"),
-  prior = c(brms::prior(normal(0, 1), class = "b"),
-            brms::prior(normal(0, 2), class = "Intercept")),
-  iter = 4000, warmup = 1000, chains = 4, cores = 4,
-  seed = 42, silent = 2, refresh = 0, file = "fit_cs"
-)
+# Primary models for headline estimands and the disutility analysis:
+# the weakly regularising fits.
+fit_po <- fit_po_list[["Weakly Regularising"]]
+fit_cs <- fit_cs_list[["Weakly Regularising"]]
 ```
 
 ```{r}
@@ -261,9 +259,9 @@ build_all_rd <- function(fit_po, fit_cs) {
 # Primary estimands: weakly regularising PO fit + category-specific fit.
 all_rd <- build_all_rd(fit_po, fit_cs)
 
-# Prior sensitivity
+# Prior sensitivity: pair each PO fit with the category-specific fit
 all_rd_by_prior <- purrr::imap(fit_po_list, \(fit, nm) {
-  build_all_rd(fit, fit_cs) |> dplyr::mutate(prior = nm)
+  build_all_rd(fit, fit_cs_list[[nm]]) |> dplyr::mutate(prior = nm)
 })
 ```
 
@@ -545,7 +543,7 @@ rd_forest(all_rd, xlim_shared = c(-0.06, 0.025))
 
 ## Prior Sensitivity Analysis
 
-The full set of risk-difference estimands is re-derived under each of the three priors on the treatment effect. The weakly regularising prior ($N(0, 1)$) is the primary specification; the vague prior ($N(0, 10)$) imposes almost no constraint; the informative prior ($N(−0.4, 0.25)$) encodes the meta-analytic expectation of benefit. Each panel shows the same table and density plot as above. Concordance across panels indicates the conclusions are driven by the data rather than the prior.
+The full set of risk-difference estimands is re-derived under each of the three priors, with both the proportional-odds and the category-specific models refit under the matching prior. The weakly regularising prior, $N(0, 1)$, is the primary specification; the vague prior, $N(0, 10)$, imposes almost no constraint; the informative prior, $N(−0.4, 0.25)$, encodes the meta-analytic expectation of benefit. Each panel shows the same table and density plot as above. Concordance across panels indicates the conclusions are driven by the data rather than the prior.
 
 ```{r}
 #| label: prior-sensitivity-summaries
@@ -554,7 +552,7 @@ rd_summary_by_prior <- purrr::map(all_rd_by_prior, summarise_rd)
 ```
 
 ::: panel-tabset
-### Weakly Regularising
+### Weakly Regularising Table
 
 ```{r}
 #| label: tbl-rd-weakreg
@@ -563,6 +561,8 @@ rd_summary_by_prior <- purrr::map(all_rd_by_prior, summarise_rd)
 rd_table(rd_summary_by_prior[["Weakly Regularising"]],
          subtitle = "Weakly regularising prior — Normal(0, 1)")
 ```
+
+### Weakly Regularising Plot
 
 ```{r}
 #| label: fig-rd-weakreg
@@ -573,7 +573,7 @@ rd_table(rd_summary_by_prior[["Weakly Regularising"]],
 rd_forest(all_rd_by_prior[["Weakly Regularising"]], xlim_shared = c(-0.06, 0.025))
 ```
 
-### Vague
+### Vague Table
 
 ```{r}
 #| label: tbl-rd-vague
@@ -582,6 +582,8 @@ rd_forest(all_rd_by_prior[["Weakly Regularising"]], xlim_shared = c(-0.06, 0.025
 rd_table(rd_summary_by_prior[["Vague"]],
          subtitle = "Vague prior — Normal(0, 10)")
 ```
+
+### Vague Plot
 
 ```{r}
 #| label: fig-rd-vague
@@ -592,7 +594,7 @@ rd_table(rd_summary_by_prior[["Vague"]],
 rd_forest(all_rd_by_prior[["Vague"]], xlim_shared = c(-0.06, 0.025))
 ```
 
-### Informative
+### Informative Table
 
 ```{r}
 #| label: tbl-rd-informative
@@ -601,6 +603,8 @@ rd_forest(all_rd_by_prior[["Vague"]], xlim_shared = c(-0.06, 0.025))
 rd_table(rd_summary_by_prior[["Informative"]],
          subtitle = "Informative prior — Normal(\u22120.4, 0.25)")
 ```
+
+### Informative Plot
 
 ```{r}
 #| label: fig-rd-informative
@@ -617,6 +621,9 @@ rd_forest(all_rd_by_prior[["Informative"]], xlim_shared = c(-0.06, 0.025))
 Rather than fix a single ROPE, we cross each outcome against a grid of half-widths. For a chosen boundary, the clinically relevant quantity is the posterior mass lying *beyond* it in the favourable direction — the probability that sugammadex confers a benefit at least as large as that threshold. Each cell below is that benefit-side mass, oriented per category (for "None" a positive risk difference is favourable; for all other categories a negative one is). A reader locates the column matching their own clinical tolerance and reads down; darker cells indicate stronger evidence of a benefit exceeding that threshold. The mass inside the ROPE is not tabulated, as it is not clinically actionable once a threshold is set.
 
 The density plot below shows each posterior with the candidate ROPE half-widths overlaid as dashed lines, so the tabulated masses can be read directly off the distributions.
+
+::: panel-tabset
+### ROPE Plot
 
 ```{r}
 #| label: fig-rope-density
@@ -671,6 +678,8 @@ all_rd |>
     panel.spacing = ggplot2::unit(1.5, "lines"))
 ```
 
+### ROPE Grid: PO Model
+
 ```{r}
 #| label: tbl-rope-cat-po
 #| tbl-cap: "ROPE grid — benefit-side mass, category-specific (proportional odds)"
@@ -689,6 +698,8 @@ rope_summary |>
   )
 ```
 
+### ROPE Grid: CS Model
+
 ```{r}
 #| label: tbl-rope-cat-nonpo
 #| tbl-cap: "ROPE grid — benefit-side mass, category-specific (non-proportional odds)"
@@ -703,6 +714,8 @@ rope_summary |>
   )
 ```
 
+### Rope Grid: Cumulative Model
+
 ```{r}
 #| label: tbl-rope-cum
 #| tbl-cap: "ROPE grid — benefit-side mass, cumulative thresholds"
@@ -716,6 +729,7 @@ rope_summary |>
     subtitle = "P(benefit > bound) — cumulative thresholds"
   )
 ```
+:::
 
 ## Severity-Weighted Decision Analysis
 
@@ -773,6 +787,9 @@ du_summary <- du_effect |>
 
 The posterior of the expected-disutility difference is shown for each severity profile. Shading matches the ROPE analysis above: darker blue lies nearer the null, lighter blue further into the benefit region. Dashed lines mark illustrative reference points on the disutility scale.
 
+::: panel-tabset
+### Expected Disutility Plot
+
 ```{r}
 #| label: fig-disutility
 #| fig-cap: "Posterior expected-disutility difference (sugammadex − neostigmine) by severity profile. Negative favours sugammadex."
@@ -813,6 +830,8 @@ du_effect |>
     panel.spacing = ggplot2::unit(1.5, "lines"))
 ```
 
+### Expected Disutility Table
+
 ```{r}
 #| label: tbl-disutility-summary
 #| tbl-cap: "Expected-disutility difference (Sugammadex − Neostigmine) by severity profile"
@@ -833,6 +852,7 @@ du_summary |>
   gt::opt_stylize(style = 1) |>
   gt::tab_options(table.font.size = gt::px(13))
 ```
+:::
 
 # Interpretation
 
