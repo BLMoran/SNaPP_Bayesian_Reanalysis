@@ -55,8 +55,8 @@ Each patient was classified according to their worst observed outcome into one o
 
 1.  **None** — no PPC and survived to discharge or day 7
 2.  **Atelectasis** — atelectasis only, no other PPC
-3.  **Pneumonia or aspiration pneumonitis** — with or without concurrent atelectasis
-4.  **ARDS** — with or without concurrent lower-severity PPCs
+3.  **Aspiration** — with or without concurrent atelectasis
+4.  **Pneumonia or ARDS** — with or without concurrent lower-severity PPCs
 5.  **Death** — from any cause
 
 Patients who experienced multiple PPCs were classified at the level of their most severe event (e.g., a patient with both atelectasis and pneumonia was classified as level 3). This "worst outcome" classification preserves the ordinal structure and avoids double-counting.
@@ -87,13 +87,13 @@ We report two families of RD estimand:
 
 - P(Y = None)
 - P(Y = Atelectasis)
-- P(Y = Pneumonia/Aspiration)
-- P(Y = ARDS)
+- P(Y = Aspiration)
+- P(Y = Pneumonia/ARDS)
 - P(Y = Death)
 
 For the four complication categories a negative RD is favourable (sugammadex reduces the probability of that outcome). The "None" category is oriented in the opposite direction: it represents a complication-free course, so a *positive* RD is favourable, and it provides the most direct single summary of overall benefit — the mirror image of the "any PPC or death" cumulative threshold. Throughout, the reported probability of benefit is oriented accordingly, $P(\text{RD} > 0)$ for None and $P(\text{RD} < 0)$ for the four complication categories.
 
-**Cumulative-threshold risk differences**, $P(Y \ge k \mid \text{sug}) - P(Y \ge k \mid \text{neo})$, at each severity threshold (any PPC or death; pneumonia or worse; ARDS or death; death).
+**Cumulative-threshold risk differences**, $P(Y \ge k \mid \text{sug}) - P(Y \ge k \mid \text{neo})$, at each severity threshold (any PPC or death; aspiration or worse; pneumonia/ARDS or death; death).
 
 ### Prior Specification
 
@@ -139,12 +139,12 @@ knitr::opts_chunk$set(
 options(mc.cores = parallel::detectCores())
 set.seed(140412)
 
-outcome_labels <- c("None", "Atelectasis", "Pneumonia/Aspiration", "ARDS", "Death")
+outcome_labels <- c("None", "Atelectasis", "Aspiration", "Pneumonia/ARDS", "Death")
 
 dat <- tibble::tribble(
-  ~treatment,       ~None, ~Atelectasis, ~`Pneumonia/Aspiration`, ~ARDS, ~Death,
-  "neostigmine",     1480,          180,                      55,    20,     15,
-  "sugammadex",      1520,          155,                      48,    16,     11
+  ~treatment,       ~None, ~Atelectasis, ~Aspiration, ~`Pneumonia/ARDS`, ~Death,
+  "neostigmine",     1375,          330,           7,              38,      2,
+  "sugammadex",      1412,          289,           4,              37,      1
 ) |>
   tidyr::pivot_longer(-treatment, names_to = "worst_outcome", values_to = "n") |>
   dplyr::mutate(
@@ -178,7 +178,7 @@ fit_po_list <- purrr::imap(prior_specs, \(b_prior, nm) {
     family = brms::cumulative("logit"),
     prior  = c(b_prior, brms::prior(normal(0, 2), class = "Intercept")),
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
-    seed = 42, silent = 2, refresh = 0
+    seed = 1404, silent = 2, refresh = 0
   )
 })
 
@@ -189,12 +189,11 @@ fit_cs_list <- purrr::imap(prior_specs, \(b_prior, nm) {
     family = brms::cumulative("logit"),
     prior  = c(b_prior, brms::prior(normal(0, 2), class = "Intercept")),
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
-    seed = 42, silent = 2, refresh = 0
+    seed = 14412, silent = 2, refresh = 0
   )
 })
 
-# Primary models for headline estimands and the disutility analysis:
-# the weakly regularising fits.
+# Primary models for headline estimands and the disutility analysis: the weakly regularising fits.
 fit_po <- fit_po_list[["Weakly Regularising"]]
 fit_cs <- fit_cs_list[["Weakly Regularising"]]
 ```
@@ -242,8 +241,8 @@ build_all_rd <- function(fit_po, fit_cs) {
       estimand = "Cumulative threshold",
       label = dplyr::case_when(
         k == 2 ~ "Any PPC or death (\u2265 Atelectasis)",
-        k == 3 ~ "Pneumonia or worse (\u2265 Pneumonia)",
-        k == 4 ~ "ARDS or death (\u2265 ARDS)",
+        k == 3 ~ "Aspiration or worse (\u2265 Aspiration)",
+        k == 4 ~ "Pneumonia/ARDS or death (\u2265 Pneumonia/ARDS)",
         k == 5 ~ "Death"
       ),
       ordering = k, rd = cum_sug - cum_neo
@@ -445,7 +444,7 @@ ggplot2::ggplot(outcome, ggplot2::aes(x = worst_outcome, y = pct, fill = treatme
   ggplot2::scale_fill_manual(
     values = c("neostigmine" = "#E69F00", "sugammadex" = "#0072B2"),
     labels = c("neostigmine" = "Neostigmine", "sugammadex" = "Sugammadex")) +
-  ggplot2::scale_x_discrete(labels = c("Pneumonia/Aspiration" = "Pneumonia/\nAspiration")) +
+  ggplot2::scale_x_discrete(labels = \(x) stringr::str_replace(x, "/", "/\n")) +
   ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.08))) +
   ggplot2::labs(title = "Outcome Distribution by Treatment Arm",
     x = "Postoperative Pulmonary Complication", y = "Percentage (%)", fill = "Treatment") +
@@ -474,6 +473,7 @@ rd_table <- function(rd_sum,
     gt::gt(groupname_col = "Estimand") |>
     gt::tab_header(title = title, subtitle = subtitle) |>
     gt::tab_footnote("Negative RD favours sugammadex for all outcomes except \"None\", where a positive RD is favourable. P(benefit) is oriented accordingly: P(RD > 0) for \"None\", P(RD < 0) otherwise.") |>
+    gt::tab_footnote("Under proportional odds a single treatment coefficient drives all thresholds, so the category-specific (PO) P(benefit) values are necessarily identical across categories.") |>
     gt::opt_stylize(style = 1) |>
     gt::tab_options(table.font.size = gt::px(13))
 }
@@ -534,7 +534,7 @@ rd_table(rd_summary)
 
 ```{r}
 #| label: fig-rd-forest
-#| fig-cap: "Posterior risk differences by estimand (median, 50% and 95% credible intervals)"
+#| fig-cap: "Posterior risk differences by estimand (median, 95% HDI)"
 #| fig-height: 7
 #| fig-width: 10
 
@@ -686,7 +686,7 @@ all_rd |>
 
 ord_lookup <- rd_summary |> dplyr::distinct(label, ordering)
 
-cat_outcomes <- c("None", "Atelectasis", "Pneumonia/Aspiration", "ARDS", "Death")
+cat_outcomes <- c("None", "Atelectasis", "Aspiration", "Pneumonia/ARDS", "Death")
 
 rope_summary |>
   dplyr::filter(estimand == "Category-specific (PO)", outcome %in% cat_outcomes) |>
@@ -744,10 +744,10 @@ The risk-difference estimands above locate any treatment effect within the sever
 profile_levels <- c("Conservative", "Central", "Severe-weighted")
 
 profiles <- tibble::tribble(
-  ~profile,          ~None, ~Atelectasis, ~`Pneumonia/Aspiration`, ~ARDS, ~Death,
-  "Conservative",        0,         0.02,                    0.10,   0.55,      1,
-  "Central",             0,         0.035,                   0.175,  0.625,     1,
-  "Severe-weighted",     0,         0.05,                    0.25,   0.70,      1
+  ~profile,          ~None, ~Atelectasis, ~Aspiration, ~`Pneumonia/ARDS`, ~Death,
+  "Conservative",        0,         0.02,        0.10,             0.55,      1,
+  "Central",             0,         0.035,      0.175,            0.625,      1,
+  "Severe-weighted",     0,         0.05,        0.25,             0.70,      1
 ) |>
   tidyr::pivot_longer(
     -profile, names_to = "worst_outcome", values_to = "disutility"
@@ -769,7 +769,7 @@ du_effect <- du_probs |>
   dplyr::group_by(profile, .draw, treatment) |>
   dplyr::summarise(eu = sum(.epred * disutility), .groups = "drop") |>
   tidyr::pivot_wider(names_from = treatment, values_from = eu) |>
-  dplyr::mutate(diff = sugammadex - neostigmine)   # < 0 favours sugammadex
+  dplyr::mutate(diff = sugammadex - neostigmine)
 
 # Reference boundaries
 ref_bounds <- c(0.001, 0.002, 0.003, 0.005)
@@ -815,8 +815,8 @@ du_effect |>
     labels = \(x) scales::number(x, accuracy = 0.001),
     breaks = scales::breaks_pretty(n = 7)) +
   ggplot2::labs(
-    x = "\u0394 expected disutility (Sugammadex \u2212 Neostigmine)",
-    y = "Severity profile",
+    x = "\u0394 Expected Disutility (Sugammadex \u2212 Neostigmine)",
+    y = "Severity Profile",
     caption = "Scale runs from 0 (no complication) to 1 (death)") +
   ggplot2::theme_minimal(base_size = 12) +
   ggplot2::theme(
@@ -834,7 +834,7 @@ du_effect |>
 
 ```{r}
 #| label: tbl-disutility-summary
-#| tbl-cap: "Expected-disutility difference (Sugammadex − Neostigmine) by severity profile"
+#| tbl-cap: "Expected-Disutility Difference (Sugammadex − Neostigmine) by Severity Profile"
 
 du_summary |>
   dplyr::transmute(
@@ -846,7 +846,7 @@ du_summary |>
   gt::gt() |>
   gt::tab_header(
     title = "Severity-Weighted Decision Analysis",
-    subtitle = "Expected-disutility difference across disutility profiles"
+    subtitle = "Expected-Disutility Difference Across Disutility Profiles"
   ) |>
   gt::tab_footnote("Negative values indicate sugammadex lowers the severity-weighted burden of pulmonary complications. Disutility weights are provisional (see Methods).") |>
   gt::opt_stylize(style = 1) |>
@@ -859,10 +859,11 @@ du_summary |>
 ## Principal Findings
 
 - Across every estimand, the direction of effect favoured sugammadex, but the magnitude was small and concentrated at the mild end of the severity spectrum.
-- The reduction in complications is driven predominantly by fewer cases of atelectasis — the least severe, least clinically consequential category — with progressively smaller and more uncertain differences for pneumonia/aspiration, ARDS, and death.
-- This is the pattern a binary composite conceals: counting any complication equally lets a shift in radiographic atelectasis register with the same weight as a prevented death.
+- The reduction in complications is driven predominantly by fewer cases of atelectasis — the least severe, least clinically consequential category — with progressively smaller and more uncertain differences for aspiration, pneumonia/ARDS, and death.
+- This is the pattern a binary composite conceals: counting any complication equally lets a shift in atelectasis register with the same weight as a prevented death.
 - The ROPE analysis makes the tension explicit — the probability of *some* benefit is high, but the probability of a benefit exceeding any clinically meaningful boundary falls steeply as the boundary widens.
 - For the more severe categories, most of the posterior mass sits close to the null, so evidence for a benefit large enough to matter is weak once more than a fraction of a percentage point of absolute risk reduction is demanded.
+- The different priors did have some impact on the P(benefit) of the outcome categories, with a shifting away from the null and an increase in the probability of benefit. This is likely due to the small numbers in each of these categories being more prior dominant. It is more evident with an informative prior as the weakly regularising and vague priors are centred around 0, so the resultant posterior distribution is shifted towards the null.
 
 ## The Severity-Weighted View
 
@@ -897,9 +898,9 @@ The analysis presented here is an interim reanalysis built from the published ag
 
 ## Correct Handling of Within-Patient Outcomes and Missingness
 
-- Each patient's worst outcome can be classified directly from their record rather than inferred from marginal totals.
+- Each patient's worst outcome can be classified directly from their record rather than inferred from marginal totals (specifically the patients that had both atelectasis and pneumonia/ARDS).
 - The pattern of missing three-month EQ-5D data can be characterised — including whether missingness varies by complication category, which bears directly on whether the severe-category disutilities are biased.
-- The horizon of the decrement (baseline to three months) will be stated explicitly; because it may not capture durable deficits in ARDS survivors, a sensitivity analysis extending the ARDS disutility toward its longer-term burden is anticipated.
+- The horizon of the decrement (baseline to three months) will be stated explicitly; because it may not capture durable deficits in pneumonia/ARDS survivors, a sensitivity analysis extending the pneumonia/ARDS disutility toward its longer-term burden is anticipated.
 
 ## Summary of Expected Differences
 
